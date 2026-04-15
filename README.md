@@ -1,21 +1,8 @@
 # Trabalho MQTT: Last Will e Retain Flag
 
-## Correcao do erro anterior
-
-Erro visto no fluxo antigo:
-
-```text
-failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine
-```
-
-Causa real: `docker compose up -d` dependia do Docker Desktop ligado. Sem daemon, o broker local nao sobe.
-
-Correcao aplicada neste repositorio:
-
-- projeto refeito em `Python`
-- demo principal nao depende mais de Docker
+- projeto feito em `Python`
 - o script sobe um broker MQTT local embutido em `127.0.0.1:18883`
-- se quiser, ainda da para apontar para broker externo com `BROKER_URL`
+- se necessario, aponte para um broker externo com `BROKER_URL`
 
 ## Objetivo
 
@@ -23,12 +10,6 @@ Demonstrar, na pratica:
 
 - `Last Will and Testament (LWT)`
 - `Retain Flag`
-
-Entregar tambem:
-
-- quando usar cada recurso
-- impactos em sistema IoT real
-- codigo funcional
 
 ## Conceitos
 
