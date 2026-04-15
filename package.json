@@ -1,0 +1,24 @@
+{
+  "name": "trabalho-lwt-retain-flag",
+  "version": "1.0.0",
+  "description": "Demonstracao pratica de MQTT Last Will and Testament (LWT) e Retain Flag.",
+  "main": "src/demo.js",
+  "scripts": {
+    "broker:up": "docker compose up -d",
+    "broker:down": "docker compose down",
+    "demo": "node src/demo.js",
+    "demo:lwt": "node src/lwt-demo.js",
+    "demo:retain": "node src/retain-demo.js"
+  },
+  "keywords": [
+    "mqtt",
+    "lwt",
+    "retain",
+    "iot"
+  ],
+  "author": "Edson Guillen",
+  "license": "MIT",
+  "dependencies": {
+    "mqtt": "^5.14.1"
+  }
+}
