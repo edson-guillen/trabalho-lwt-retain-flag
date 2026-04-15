@@ -1,3 +1,8 @@
+# Integrantes
+
+- Edson Hila Guillen Lopes, RA: 1959483.
+- Lucas Vilas Boas Marcelino Valente, RA: 1965387.
+
 # Trabalho MQTT: Last Will e Retain Flag
 
 - projeto feito em `Python`
