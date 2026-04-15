@@ -1,0 +1,13 @@
+[project]
+name = "trabalho-lwt-retain-flag"
+version = "2.0.0"
+description = "Demonstracao pratica de MQTT LWT e Retain Flag em Python."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "amqtt>=0.11.3,<0.12",
+  "paho-mqtt>=2.1.0,<3",
+]
+
+[tool.uv]
+package = false

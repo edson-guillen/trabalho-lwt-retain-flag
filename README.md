@@ -1,207 +1,227 @@
 # Trabalho MQTT: Last Will e Retain Flag
 
+## Correcao do erro anterior
+
+Erro visto no fluxo antigo:
+
+```text
+failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine
+```
+
+Causa real: `docker compose up -d` dependia do Docker Desktop ligado. Sem daemon, o broker local nao sobe.
+
+Correcao aplicada neste repositorio:
+
+- projeto refeito em `Python`
+- demo principal nao depende mais de Docker
+- o script sobe um broker MQTT local embutido em `127.0.0.1:18883`
+- se quiser, ainda da para apontar para broker externo com `BROKER_URL`
+
 ## Objetivo
 
-Demonstrar, na pratica, o funcionamento de dois recursos importantes do MQTT:
+Demonstrar, na pratica:
 
 - `Last Will and Testament (LWT)`
 - `Retain Flag`
 
-O projeto inclui:
+Entregar tambem:
 
-- explicacao conceitual
 - quando usar cada recurso
-- impactos em um sistema IoT real
-- codigo funcional para demonstrar ambos
+- impactos em sistema IoT real
+- codigo funcional
 
 ## Conceitos
 
 ### 1. Last Will and Testament (LWT)
 
-O `LWT` e uma mensagem cadastrada pelo cliente no momento da conexao com o broker. Se esse cliente cair de forma inesperada, o broker publica automaticamente a mensagem definida no `will`.
+`LWT` e mensagem cadastrada no momento da conexao. Se cliente cair sem enviar `DISCONNECT`, o broker publica automaticamente a mensagem de ultima vontade.
 
-Exemplo pratico:
+Exemplo:
 
-- um sensor conecta no broker
-- esse sensor registra que, se cair sem avisar, o broker deve publicar `"offline"`
-- se a energia acabar, a rede cair ou o processo travar, o broker dispara esse aviso para os assinantes
+- sensor conecta
+- registra `will` com status `offline`
+- processo trava ou rede cai
+- broker publica `offline` para assinantes
 
 ### Quando usar LWT
 
-Use `LWT` quando o sistema precisa detectar falhas inesperadas de dispositivos ou servicos, por exemplo:
+Use `LWT` quando sistema precisa detectar falha inesperada:
 
-- sensores que podem perder energia
-- gateways que podem sair da rede
-- atuadores criticos que nao podem sumir silenciosamente
-- monitoramento de disponibilidade de dispositivos
+- sensor pode perder energia
+- gateway pode cair da rede
+- atuador critico nao pode desaparecer silenciosamente
+- dashboard precisa refletir disponibilidade real
 
 ### Impactos do LWT em IoT real
 
-Impactos positivos:
+Beneficios:
 
-- permite detectar falhas sem depender de polling constante
-- melhora observabilidade do ecossistema IoT
-- acelera reacao a indisponibilidade de dispositivos
-- ajuda dashboards, supervisao e automacoes a refletirem o estado real do sistema
+- detecta indisponibilidade sem polling constante
+- melhora observabilidade do parque IoT
+- acelera alarmes e automacoes de contingencia
+- reduz tempo de reacao operacional
 
 Cuidados:
 
-- o `LWT` nao substitui heartbeat ou telemetria periodica
-- a deteccao depende da sessao MQTT e do timeout/keepalive
-- mensagens mal planejadas podem gerar alarmes demais
+- nao substitui heartbeat
+- deteccao depende de `keepalive` e timeout do broker
+- configuracao ruim pode gerar falso positivo
 
 ## 2. Retain Flag
 
-Quando uma mensagem e publicada com `retain=true`, o broker guarda a ultima mensagem daquele topico. Assim, qualquer novo assinante que entrar depois recebe esse valor imediatamente, sem esperar a proxima publicacao.
+Quando publica com `retain=true`, broker guarda ultima mensagem do topico e entrega imediatamente para novo assinante.
 
-Exemplo pratico:
+Exemplo:
 
-- um sensor publica a ultima temperatura com `retain=true`
-- um dashboard conecta depois
-- ao se inscrever no topico, ele recebe instantaneamente a ultima leitura retida
+- sensor publica ultima temperatura com `retain=true`
+- dashboard conecta depois
+- dashboard recebe ultimo valor sem esperar nova leitura
 
 ### Quando usar Retain Flag
 
-Use `retain` quando novos clientes precisam conhecer o ultimo estado conhecido assim que entram no sistema:
+Use `retain` quando cliente novo precisa do ultimo estado logo ao entrar:
 
-- ultimo valor de sensor
-- estado atual de um rele ou lampada
+- ultima temperatura
+- estado atual de rele/lampada
 - configuracao vigente
-- status atual de um dispositivo
+- ultimo status de dispositivo
 
 ### Impactos do Retain Flag em IoT real
 
-Impactos positivos:
+Beneficios:
 
-- reduz tempo para sincronizar novos clientes
-- evita interfaces vazias aguardando nova mensagem
-- facilita reinicio de dashboards, gateways e apps
-- melhora consistencia do ultimo estado conhecido
+- novo cliente sincroniza rapido
+- interface nao fica vazia
+- reinicio de app/gateway recupera ultimo estado
+- sistema distribui estado conhecido com menos atraso
 
 Cuidados:
 
-- mensagem antiga pode parecer estado atual se nao houver timestamp
-- uso incorreto pode propagar informacao obsoleta
-- e preciso limpar a mensagem retida quando ela nao fizer mais sentido
+- dado antigo pode parecer atual
+- precisa timestamp no payload
+- precisa limpar mensagem retida quando estado nao vale mais
 
-## Diferenca pratica entre LWT e Retain
+## Diferenca pratica
 
 `LWT`:
 
-- serve para avisar falha inesperada
-- o broker publica em nome do cliente desconectado
-- foco em disponibilidade e monitoramento
+- foco em falha inesperada
+- broker publica em nome do cliente que caiu
+- ajuda monitoramento e disponibilidade
 
 `Retain`:
 
-- serve para guardar o ultimo valor do topico
-- o broker entrega esse ultimo valor para novos assinantes
-- foco em sincronizacao de estado
+- foco em ultimo estado conhecido
+- broker guarda e reapresenta ultima mensagem
+- ajuda sincronizacao de novos clientes
 
-## Estrutura do projeto
+## Estrutura
 
 ```text
 .
-|-- compose.yml
-|-- mosquitto/
-|   `-- mosquitto.conf
-|-- src/
-|   |-- demo.js
-|   |-- lwt-demo.js
-|   |-- retain-demo.js
-|   `-- utils.js
-`-- README.md
+|-- embedded_broker.py
+|-- lwt_demo.py
+|-- main.py
+|-- mqtt_client.py
+|-- pyproject.toml
+|-- requirements.txt
+`-- retain_demo.py
 ```
 
 ## Requisitos
 
-- Node.js instalado
-- Docker Desktop instalado e em execucao
+Opcao recomendada:
+
+- `uv` instalado
+- com `uv`, o proprio comando pode baixar/runtime Python gerenciado
+
+Opcao alternativa:
+
+- Python `3.11`, `3.12` ou `3.13`
+- `pip`
 
 ## Como executar
 
+### Jeito mais simples com `uv`
+
+1. Sincronize dependencias:
+
+```powershell
+uv sync --python 3.12
+```
+
+2. Rode demo completa:
+
+```powershell
+uv run python main.py
+```
+
+### Jeito com Python + pip
+
 1. Instale dependencias:
 
-```bash
-npm install
+```powershell
+python -m pip install -r requirements.txt
 ```
 
-2. Suba o broker MQTT local:
+2. Rode:
 
-```bash
-npm run broker:up
-```
-
-3. Execute a demonstracao completa:
-
-```bash
-npm run demo
-```
-
-4. Para parar o broker:
-
-```bash
-npm run broker:down
+```powershell
+python main.py
 ```
 
 ## Variaveis opcionais
 
-O projeto aceita configuracao por variavel de ambiente:
+- `BROKER_URL`: usa broker externo em vez do broker local embutido
+- `BROKER_HOST`: altera host do broker local embutido
+- `BROKER_PORT`: altera porta do broker local embutido
+- `TOPIC_BASE`: altera raiz dos topicos da demo
 
-- `BROKER_URL`: altera o broker alvo
-- `TOPIC_BASE`: altera a raiz dos topicos usados na demonstracao
-
-Exemplo:
-
-```bash
-BROKER_URL=mqtt://localhost:1883 TOPIC_BASE=trabalho/aula npm run demo
-```
-
-PowerShell:
+Exemplo com broker externo:
 
 ```powershell
-$env:BROKER_URL="mqtt://localhost:1883"
-$env:TOPIC_BASE="trabalho/aula"
-npm run demo
+$env:BROKER_URL="mqtt://broker.emqx.io:1883"
+$env:TOPIC_BASE="trabalho/aula/python"
+uv run python main.py
 ```
 
 ## O que a demo faz
 
 ### Demo 1: LWT
 
-- cria um cliente monitor
-- cria um dispositivo com mensagem `will`
-- publica status `online`
-- derruba a conexao do dispositivo de forma brusca
-- o broker publica automaticamente a mensagem `offline`
+- sobe cliente monitor
+- sobe dispositivo com `will`
+- publica `online`
+- fecha socket do dispositivo sem `DISCONNECT`
+- broker publica `offline`
 
 ### Demo 2: Retain Flag
 
-- publica uma leitura com `retain=true`
-- conecta um assinante depois da publicacao
-- esse assinante recebe imediatamente a ultima mensagem retida
-- ao final, a mensagem retida e limpa para nao interferir na proxima execucao
+- publica leitura com `retain=true`
+- conecta assinante depois
+- assinante recebe ultima leitura imediatamente
+- demo limpa mensagem retida no final
 
-## Exemplo de saida esperada
+## Saida esperada
 
 ```text
 === DEMO LWT ===
-[monitor] inscrito em trabalho/mqtt/lwt/status
+[monitor] inscrito em trabalho/python/lwt-retain/lwt/status
 [device] status online publicado
 [device] simulando falha brusca
-[monitor] LWT recebido: {"deviceId":"sensor-temp-01","status":"offline",...}
+[monitor] LWT recebido: {"deviceId": "sensor-temp-01", "status": "offline", ...}
 
 === DEMO RETAIN FLAG ===
 [publisher] mensagem retida publicada
-[late-subscriber] recebeu ao conectar: {"deviceId":"sensor-temp-01","temperature":23.7,...}
-[late-subscriber] flag retain no pacote: true
+[late-subscriber] recebeu ao conectar: {"deviceId": "sensor-temp-01", "temperature": 23.7, ...}
+[late-subscriber] flag retain no pacote: True
 ```
 
 ## Conclusao
 
-Em um sistema IoT real, `LWT` e `Retain Flag` atendem problemas diferentes e complementares:
+Em IoT real:
 
-- `LWT` ajuda a detectar falhas inesperadas
-- `Retain` ajuda novos clientes a iniciarem com o ultimo estado conhecido
+- `LWT` responde pergunta "dispositivo caiu?"
+- `Retain` responde pergunta "qual ultimo estado conhecido?"
 
-Usados corretamente, os dois melhoram confiabilidade, observabilidade e sincronizacao do sistema.
+Juntos, melhoram confiabilidade, observabilidade e sincronizacao.
